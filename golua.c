@@ -1,4 +1,5 @@
 #include <stdint.h>
+#include <stdio.h>
 #include "lua.h"
 #include "lauxlib.h"
 #include "lualib.h"
@@ -64,6 +65,25 @@ void clua_pushgofunction(lua_State* L, unsigned int fid)
 	*fidptr = fid;
 	luaL_getmetatable(L, "GoLua.GoFunction");
 	lua_setmetatable(L, -2);
+}
+
+//wrapper for pushgofunctionascfunction
+int closure_function(lua_State* L)
+{
+	unsigned int *fid = clua_checkgofunction(L,lua_upvalueindex(1));
+	GoInterface* gi = clua_getgostate(L);
+	// don't remove this, i guess, so it works just like callback_function
+	// lua_remove(L,1);
+	return golua_callgofunction(*gi,*fid);
+}
+
+void clua_pushgofunctionascfunction(lua_State* L, unsigned int fid)
+{
+	unsigned int* fidptr = (unsigned int*)lua_newuserdata(L, sizeof(unsigned int));
+	*fidptr = fid;
+	luaL_getmetatable(L, "GoLua.GoFunction");
+	lua_setmetatable(L, -2);
+	lua_pushcclosure(L,&closure_function,1);
 }
 
 void clua_pushlightinteger(lua_State* L, int n)
