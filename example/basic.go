@@ -1,6 +1,6 @@
 package main
 
-import "../"
+import "github.com/xenith-studios/golua"
 import "fmt"
 
 func test(L *golua.State) int {

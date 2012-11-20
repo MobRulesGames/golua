@@ -1,4 +1,5 @@
 #include <stdint.h>
+#include <stdio.h>
 #include "lua.h"
 #include "lauxlib.h"
 #include "lualib.h"
@@ -66,9 +67,28 @@ void clua_pushgofunction(lua_State* L, unsigned int fid)
 	lua_setmetatable(L, -2);
 }
 
+//wrapper for pushgofunctionascfunction
+int closure_function(lua_State* L)
+{
+	unsigned int *fid = clua_checkgofunction(L,lua_upvalueindex(1));
+	GoInterface* gi = clua_getgostate(L);
+	// don't remove this, i guess, so it works just like callback_function
+	// lua_remove(L,1);
+	return golua_callgofunction(*gi,*fid);
+}
+
+void clua_pushgofunctionascfunction(lua_State* L, unsigned int fid)
+{
+	unsigned int* fidptr = (unsigned int*)lua_newuserdata(L, sizeof(unsigned int));
+	*fidptr = fid;
+	luaL_getmetatable(L, "GoLua.GoFunction");
+	lua_setmetatable(L, -2);
+	lua_pushcclosure(L,&closure_function,1);
+}
+
 void clua_pushlightinteger(lua_State* L, int n)
 {
-  lua_pushlightuserdata(L, (void*)(GoUintptr)n);
+  lua_pushlightuserdata(L, (void*)(uintptr_t)n);
 }
 
 uintptr_t clua_tolightinteger(lua_State *L, unsigned int index)
@@ -155,7 +175,7 @@ GoInterface clua_atpanic(lua_State* L, unsigned int panicf_id)
 	else
 	{
 		//TODO: technically UB, function ptr -> non function ptr
-		return golua_cfunctiontointerface((GoUintptr *)pf);
+		return golua_cfunctiontointerface((uintptr_t *)pf);
 	}
 }
 
@@ -166,7 +186,7 @@ int clua_callluacfunc(lua_State* L, lua_CFunction f)
 
 void* allocwrapper(void* ud, void *ptr, size_t osize, size_t nsize)
 {
-	return (void*)golua_callallocf((GoUintptr)ud,(GoUintptr)ptr,osize,nsize);
+	return (void*)golua_callallocf((uintptr_t)ud,(uintptr_t)ptr,osize,nsize);
 }
 
 lua_State* clua_newstate(void* goallocf)
